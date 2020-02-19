@@ -1,8 +1,7 @@
 # I2C2 (I2C in C)
 ## David Tarazi and Jack Greenberg
 
-The goal of our project is to write an implementation of the I2C (inter-integrated chip) protocol in C. Our MVP will be reading data from an I2C device (like a soil moisture sensor) on an Arduino, and reading out from the Arduino on our computers. Using exposed pins and registers on the Arduino, we will write the embedded software that will read data from a sensor, and after we have that, we will focus on being able to write data to another chip.
-
+The goal of our project is to write an implementation of the I2C (inter-integrated chip) protocol in C. Our MVP will be having two Arduinos communicate over I2C (sending random data or sensor data from another I2C). We will manipulate the pins and ports of the Arduino to enable device communication, and have some sort of sensor (like a soil moisture sensor) that produces data and sends it via I2C to our Arduino, and we will then be able to read out from the Arduino using a serial output.
 
 ### Goals
 Our goals are learning about writing embedded firmware and about inter-device communications at the phyiscal level. We also hope to learn about reading data sheets and understanding the technical jargon they contain.
