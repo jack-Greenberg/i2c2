@@ -3,7 +3,8 @@
 
 # Unignore all with extensions
 !*.*
-
+!resources/
+!reports/
 # Prerequisites
 *.d
 

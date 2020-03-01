@@ -1,4 +1,6 @@
-#include "i2c.h"
+/* #include "i2c.h" */
+#include <avr/io.h>
+#include <util/delay.h>
 
 void initTimer(void)
 {
@@ -25,7 +27,7 @@ int main (void)
 {
 	DDRB |= _BV(PB0);
 
-	sei(); // Enable interrupts globally
+	SEI(); // Enable interrupts globally
 	initTimer(); // Initialize the timer
 
 }
