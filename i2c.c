@@ -1,7 +1,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
+#include "i2c.h"
 
-int main (void)
+void init_I2C(int baud_rate)
 {
-    // TODO: Implement I2C!
+	
 }
