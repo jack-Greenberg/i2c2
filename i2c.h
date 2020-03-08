@@ -1,13 +1,21 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define F_CPU 16000000UL // Frequency of ATMega328p (16MHz)
+#define F_CPU               16000000UL // Frequency of ATMega328p (16MHz)
 
-#define BAUD_STD 100000
-#define BAUD_FULL 400000
+#define BAUD_STD            100000
+#define BAUD_FULL           400000
+#define PRESCALER           8
 
-#define WRITE 0
-#define READ  1
+#define ADDRESS_LENGTH      7
+
+#define WRITE               0
+#define READ                1
+
+#define I2C_PORT_DIRECTION_REGISTER     DDRB
+#define I2C_PORT                        PORTB
+#define SDA_PIN                         PB2
+#define SCL_PIN                         PB3
 
 void init_I2C(int baud_rate);
 
