@@ -8,6 +8,7 @@
 #define PRESCALER           1
 
 #define ADDRESS_LENGTH      7
+#define REGISTER_LENGTH     8
 
 #define WRITE               0
 #define READ                1
@@ -19,7 +20,7 @@
 
 #define BIT_MASK 0x1;
 
-volatile uint32_t globalTimerFlag = 0x01;
+volatile uint8_t globalTimerFlag = 0x01;   // 1 means the clock is high, 0 means clock is low
 uint8_t gStartTimerFlag = 0;
 uint8_t control = 0x01;
 
@@ -41,20 +42,19 @@ void setup() {
   // Baud is multiplied by 2 so that one period is 100kHz in std mode
 
   sei(); // Reenable interrupts
-//  start_I2C(0x55, 0xCD, 1);
   gStartTimerFlag = 1;
 
-  Serial.begin(9600);
+  Serial.begin(19200);
 }
 
-int set_SDA(int bit) {
-  while(globalTimerFlag);
-  if (bit) {
+int set_SDA(int cur_bit) {
+  while(globalTimerFlag);       // stall until clock is low
+  if (cur_bit) {
     I2C_PORT |= _BV(SDA_PIN);
   } else {
     I2C_PORT &= ~_BV(SDA_PIN);
   }
-  while(!globalTimerFlag);
+  // while(!globalTimerFlag);      // stall until clock goes high again
 }
 
 int read_SDA() {
@@ -64,7 +64,7 @@ int read_SDA() {
 
 ISR(TIMER1_COMPA_vect)
 {
-  // This just sets the clock pin
+  // flip clock state if in I2C routine
   if (gStartTimerFlag) {
     I2C_PORT ^= _BV(SCL_PIN);
     globalTimerFlag ^= 1;
@@ -72,33 +72,34 @@ ISR(TIMER1_COMPA_vect)
     I2C_PORT |= _BV(SCL_PIN);
   }
 
-  if (globalTimerFlag && !control) {
-    // Don't do anything becase SCL is high
-
-    I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
-    // unless you are reading ACK/NACK
-  } else {
-    
-  }
+//  if (globalTimerFlag && !control) {
+//    // Don't do anything becase SCL is high
+//
+//    I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
+//    // unless you are reading ACK/NACK
+//  } else {
+//    
+//  }
 }
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
-  set_SDA(0);
+  // wait until clock line is high then set data line to low, then initiate start condition
+  while(!globalTimerFlag);
+  I2C_PORT &= ~_BV(SDA_PIN);
   gStartTimerFlag = 1;
-  set_SDA(1);
 
-  int bit;
-
-  for (int i = ADDRESS_LENGTH; i >= 0; i--) {
-    bit = bit_is_set(secondary_address, i);
-    set_SDA(bit);
+  int cur_bit;
+  // write the address
+  for (int i = ADDRESS_LENGTH; i > 0; i--) {
+    cur_bit = bit_is_set(secondary_address, i);
+    set_SDA(cur_bit);
   }
 
   set_SDA(mode);
-
-  for (int i = 8; i >= 0; i--) {
-    bit = bit_is_set(secondary_register, i);
-    set_SDA(bit);
+  // write the register
+  for (int i = REGISTER_LENGTH; i > 0; i--) {
+    cur_bit = bit_is_set(secondary_register, i);
+    set_SDA(cur_bit);
   }
 }
 
