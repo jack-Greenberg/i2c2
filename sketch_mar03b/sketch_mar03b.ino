@@ -41,7 +41,7 @@ void setup() {
   // Baud is multiplied by 2 so that one period is 100kHz in std mode
 
   sei(); // Reenable interrupts
-//  start_I2C(0x55, 0xCD, 1);
+
   gStartTimerFlag = 1;
 
   Serial.begin(9600);
@@ -103,12 +103,6 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 }
 
 void loop() {
-    set_SDA(1);
-    set_SDA(0);
-    set_SDA(1);
-    set_SDA(1);
-    set_SDA(0);
-    set_SDA(0);
     set_SDA(1);
     set_SDA(0);
 }

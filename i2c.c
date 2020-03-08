@@ -46,7 +46,7 @@ int read_SDA() {
 }
 
 // This interrupt sets a global flag to be used by other functions (like setting the clock)
-ISR(TIMERA_COMP_vect)
+ISR(TIMER1_COMPA_vect)
 {
 	// This just sets the clock pin
 	if (gStartTimerFlag) {
