@@ -4,10 +4,10 @@
 The goal of our project is to write an implementation of the I2C (inter-integrated chip) protocol in C. Our MVP will be having two Arduinos communicate over I2C (sending random data or sensor data from another I2C). We will manipulate the pins and ports of the Arduino to enable device communication, and have some sort of sensor (like a soil moisture sensor) that produces data and sends it via I2C to our Arduino, and we will then be able to read out from the Arduino using a serial output.
 
 ### Goals
-Our goals are learning about writing embedded firmware and about inter-device communications at the physical level. We also hope to learn about reading data sheets and understanding the technical jargon they contain.
+Our goals are learning about writing embedded firmware and about inter-device communications at the physical level. We also hope to learn about reading data sheets and understanding the technical jargon they contain. As we worked more with the Arduino and its functionality at a lower level, we now hope to learn more about communications between multiple devices and develop multiple ICs working with the same communication protocol. We will eventually work towards sending messages from one Arduino to another and controlling their status. We want to learn more about how to interface with that and be able to type a message into our computer and read it on another computer via serial and I2C.
 
 ### Getting Started
-We started off by doing research about I2C and setting up Arduinos to develop the project. We found resources for working with timers in AVR chips (Arduino uses an AVR chip called the ATMega328p with a 16MHz clock timer). We ran calculations to figure out the right set up so that the clock can operate at 100kHz and confirmed our set up with an **Analog Discovery** oscilloscope. 
+We started off by doing research about I2C and setting up Arduinos to develop the project. We found resources for working with timers in AVR chips (Arduino uses an AVR chip called the ATMega328p with a 16MHz clock timer). We ran calculations to figure out the right set up so that the clock can operate at 100kHz and confirmed our set up with an **Analog Discovery** oscilloscope.
 
 We also wrote pseudo-code for all the functions that I2C uses, including
 
