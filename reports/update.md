@@ -31,3 +31,9 @@ The three concrete tasks for the next phase are:
 1. Find a way to synchronize SCL and SDA (Jack). This will be "done" when we can see the clock line and the data line operating at the same frequency. The data line should only be changing while the clock line is low, and if we are just flipping the data line between high and low, the high and low states should be present for the same amount of time.
 2. Write functions for reading SDA as a secondary (slave) device (David). For this to be considered done, we should have established a working serial connection between two arduinos and have code that is written for the receiver to read at the correct times assuming the issue we have with SCL and SDA communication synchronization is resolved.
 3. Calculate resistor values for I2C circuit (Jack). This will be done when we have a final resistor value based on [Texas Instruments' guide](http://www.ti.com/lit/an/slva689/slva689.pdf).
+
+---
+
+[Trello link](https://trello.com/b/Ed0RLSGK/i2c2)
+
+[GitHub Repository](https://github.com/jack-Greenberg/SoftSysI2C2)
