@@ -92,12 +92,16 @@ void setup() {
   // Baud is multiplied by 2 so that one period is 100kHz in std mode
 
   sei(); // Reenable interrupts
+<<<<<<< HEAD
+=======
 
+>>>>>>> caafdf4a32a0a520c3761bbb12b96094bac38268
   gStartTimerFlag = 1;
 
   Serial.begin(19200);
 }
 
+<<<<<<< HEAD
 int set_SDA(int bit) {
 //  while(globalTimerFlag);
 //  if (bit) {
@@ -107,6 +111,16 @@ int set_SDA(int bit) {
 //  }
   enqueue(bit_buffer, bit);
 //  while(!globalTimerFlag);
+=======
+int set_SDA(int cur_bit) {
+  while(globalTimerFlag);       // stall until clock is low
+  if (cur_bit) {
+    I2C_PORT |= _BV(SDA_PIN);
+  } else {
+    I2C_PORT &= ~_BV(SDA_PIN);
+  }
+  // while(!globalTimerFlag);      // stall until clock goes high again
+>>>>>>> 5d8b50700f3c00cd2b8cef779769cd1df46a9c7e
 }
 
 int read_SDA() {
@@ -131,14 +145,14 @@ ISR(TIMER1_COMPA_vect)
     I2C_PORT |= _BV(SCL_PIN);
   }
 
-  if (globalTimerFlag && !control) {
-    // Don't do anything becase SCL is high
-
-    I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
-    // unless you are reading ACK/NACK
-  } else {
-    
-  }
+//  if (globalTimerFlag && !control) {
+//    // Don't do anything becase SCL is high
+//
+//    I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
+//    // unless you are reading ACK/NACK
+//  } else {
+//    
+//  }
 }
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
@@ -146,7 +160,6 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
   while(!globalTimerFlag);
   I2C_PORT &= ~_BV(SDA_PIN);
   gStartTimerFlag = 1;
-  set_SDA(1);
 
   int cur_bit;
   // write the address
