@@ -23,6 +23,56 @@ volatile uint32_t globalTimerFlag = 0x01;
 uint8_t gStartTimerFlag = 0;
 uint8_t control = 0x01;
 
+typedef struct Queue {
+  int front, back, siz, capacity;
+  uint8_t* arr;
+} Queue;
+
+Queue* make_queue(int capacity) {
+  Queue* queue = malloc(sizeof(Queue));
+  queue->capacity = capacity;
+  queue->front = queue->siz = 0;
+  queue->back = capacity - 1;
+  queue->arr = malloc(sizeof(uint8_t) * queue->capacity);
+  return queue;
+}
+
+int isFull(Queue* queue) 
+{  return (queue->siz == queue->capacity);  } 
+  
+int isEmpty(Queue* queue) 
+{  return (queue->siz == 0); } 
+
+void enqueue(struct Queue* queue, uint8_t bit) 
+{ 
+    if (isFull(queue)) 
+        return; 
+    queue->back = (queue->back + 1) % queue->capacity; 
+    queue->arr[queue->back] = bit; 
+    queue->siz = queue->siz + 1; 
+} 
+  
+// Function to remove an item from queue.  
+// It changes front and size 
+int dequeue(Queue* queue) 
+{ 
+    if (isEmpty(queue)) 
+        return 1; 
+    int bit = queue->arr[queue->front]; 
+    queue->front = (queue->front + 1) % queue->capacity; 
+    queue->siz = queue->siz - 1; 
+    return bit; 
+}
+
+int front(Queue* queue) 
+{ 
+    if (isEmpty(queue)) 
+        return 1; 
+    return queue->arr[queue->front]; 
+} 
+
+Queue* bit_buffer = make_queue(32);
+
 void setup() {
   cli();
   TCCR1A = 0;
@@ -48,13 +98,14 @@ void setup() {
 }
 
 int set_SDA(int bit) {
-  while(globalTimerFlag);
-  if (bit) {
-    I2C_PORT |= _BV(SDA_PIN);
-  } else {
-    I2C_PORT &= ~_BV(SDA_PIN);
-  }
-  while(!globalTimerFlag);
+//  while(globalTimerFlag);
+//  if (bit) {
+//    I2C_PORT |= _BV(SDA_PIN);
+//  } else {
+//    I2C_PORT &= ~_BV(SDA_PIN);
+//  }
+  enqueue(bit_buffer, bit);
+//  while(!globalTimerFlag);
 }
 
 int read_SDA() {
@@ -68,6 +119,13 @@ ISR(TIMER1_COMPA_vect)
   if (gStartTimerFlag) {
     I2C_PORT ^= _BV(SCL_PIN);
     globalTimerFlag ^= 1;
+    int bit = front(bit_buffer);
+    if (bit) {
+      I2C_PORT |= _BV(SDA_PIN);
+    } else {
+      I2C_PORT &= ~_BV(SDA_PIN);
+    }
+    dequeue(bit_buffer);
   } else {
     I2C_PORT |= _BV(SCL_PIN);
   }
@@ -103,6 +161,14 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 }
 
 void loop() {
-    set_SDA(1);
-    set_SDA(0);
+    enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);
+    enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);
+    enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);
+    enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);enqueue(bit_buffer, 1);
+    enqueue(bit_buffer, 0);
 }
