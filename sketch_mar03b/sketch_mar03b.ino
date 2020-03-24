@@ -21,58 +21,11 @@
 #define BIT_MASK 0x1;
 
 volatile uint8_t globalTimerFlag = 0x01;   // 1 means the clock is high, 0 means clock is low
-uint8_t gStartTimerFlag = 0;
+volatile uint8_t gStartTimerFlag = 0;
+uint8_t *startTimerFlagPtr = &gStartTimerFlag;
 uint8_t control = 0x01;
 
-typedef struct Queue {
-  int front, back, siz, capacity;
-  uint8_t* arr;
-} Queue;
-
-Queue* make_queue(int capacity) {
-  Queue* queue = malloc(sizeof(Queue));
-  queue->capacity = capacity;
-  queue->front = queue->siz = 0;
-  queue->back = capacity - 1;
-  queue->arr = malloc(sizeof(uint8_t) * queue->capacity);
-  return queue;
-}
-
-int isFull(Queue* queue) 
-{  return (queue->siz == queue->capacity);  } 
-  
-int isEmpty(Queue* queue) 
-{  return (queue->siz == 0); } 
-
-void enqueue(struct Queue* queue, uint8_t bit) 
-{ 
-    if (isFull(queue)) 
-        return; 
-    queue->back = (queue->back + 1) % queue->capacity; 
-    queue->arr[queue->back] = bit; 
-    queue->siz = queue->siz + 1; 
-} 
-  
-// Function to remove an item from queue.  
-// It changes front and size 
-int dequeue(Queue* queue) 
-{ 
-    if (isEmpty(queue)) 
-        return 1; 
-    int bit = queue->arr[queue->front]; 
-    queue->front = (queue->front + 1) % queue->capacity; 
-    queue->siz = queue->siz - 1; 
-    return bit; 
-}
-
-int front(Queue* queue) 
-{ 
-    if (isEmpty(queue)) 
-        return 1; 
-    return queue->arr[queue->front]; 
-} 
-
-Queue* bit_buffer = make_queue(32);
+void I2C_delay(void) {}
 
 void setup() {
   cli();
@@ -84,7 +37,7 @@ void setup() {
   TCCR1B |= _BV(CS10); // PRESCALER 1
   TIMSK1 |= _BV(OCIE1A); // Enable interrupts on channel 1A
 
-  I2C_PORT_DIRECTION_REGISTER |= _BV(SDA_PIN) | _BV(SCL_PIN); // Set the SDA and SCL pins to be outputs
+  I2C_PORT_DIRECTION_REGISTER |= _BV(SCL_PIN) | _BV(SDA_PIN); // Set the SDA and SCL pins to be outputs
   I2C_PORT |= _BV(SDA_PIN) | _BV(SCL_PIN); // Set default as pins being high
 
   // Set Output Compare Register 1A (value the timer compares to to know when to reset)
@@ -93,20 +46,20 @@ void setup() {
 
   sei(); // Reenable interrupts
 
-  gStartTimerFlag = 1;
+//  gStartTimerFlag = 1;
 
   Serial.begin(19200);
 }
 
 int set_SDA(int bit) {
-//  while(globalTimerFlag);
-//  if (bit) {
-//    I2C_PORT |= _BV(SDA_PIN);
-//  } else {
-//    I2C_PORT &= ~_BV(SDA_PIN);
-//  }
-  enqueue(bit_buffer, bit);
-//  while(!globalTimerFlag);
+  while(globalTimerFlag);
+//  I2C_delay();
+  if (bit) {
+    I2C_PORT |= _BV(SDA_PIN);
+  } else {
+    I2C_PORT &= ~_BV(SDA_PIN);
+  }
+  while(!globalTimerFlag);
 }
 
 int read_SDA() {
@@ -114,19 +67,18 @@ int read_SDA() {
   return bit_is_set(I2C_PORT, SDA_PIN);
 }
 
+int count = 0;
 ISR(TIMER1_COMPA_vect)
 {
   // flip clock state if in I2C routine
   if (gStartTimerFlag) {
     I2C_PORT ^= _BV(SCL_PIN);
     globalTimerFlag ^= 1;
-    int bit = front(bit_buffer);
-    if (bit) {
-      I2C_PORT |= _BV(SDA_PIN);
-    } else {
-      I2C_PORT &= ~_BV(SDA_PIN);
+    count++;
+
+    if (count == 10000) {
+      gStartTimerFlag = 0;
     }
-    dequeue(bit_buffer);
   } else {
     I2C_PORT |= _BV(SCL_PIN);
   }
@@ -134,7 +86,7 @@ ISR(TIMER1_COMPA_vect)
   if (globalTimerFlag && !control) {
     // Don't do anything becase SCL is high
 
-    I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
+ //   I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
     // unless you are reading ACK/NACK
   } else {
     
@@ -143,10 +95,10 @@ ISR(TIMER1_COMPA_vect)
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
   // wait until clock line is high then set data line to low, then initiate start condition
-  while(!globalTimerFlag);
   I2C_PORT &= ~_BV(SDA_PIN);
+//  I2C_delay();
   gStartTimerFlag = 1;
-  set_SDA(1);
+  I2C_PORT |= _BV(SDA_PIN);
 
   int cur_bit;
   // write the address
@@ -163,15 +115,13 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
   }
 }
 
-void loop() {
-    enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);
-    enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);
-    enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);
-    enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);enqueue(bit_buffer, 1);
-    enqueue(bit_buffer, 0);
+void stop_I2C() {
+  set_SDA(1);
+  gStartTimerFlag = 0;
 }
+
+void loop() {
+  start_I2C(0x4a, 0x6D, 1);
+}
+
+//  start_I2C(0x4a, 0x6D, 1);
