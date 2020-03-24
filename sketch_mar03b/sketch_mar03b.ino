@@ -46,14 +46,13 @@ void setup() {
 
   sei(); // Reenable interrupts
 
-//  gStartTimerFlag = 1;
+  gStartTimerFlag = 1;
 
   Serial.begin(19200);
 }
 
 int set_SDA(int bit) {
   while(globalTimerFlag);
-//  I2C_delay();
   if (bit) {
     I2C_PORT |= _BV(SDA_PIN);
   } else {
@@ -67,18 +66,11 @@ int read_SDA() {
   return bit_is_set(I2C_PORT, SDA_PIN);
 }
 
-int count = 0;
 ISR(TIMER1_COMPA_vect)
 {
-  // flip clock state if in I2C routine
   if (gStartTimerFlag) {
     I2C_PORT ^= _BV(SCL_PIN);
     globalTimerFlag ^= 1;
-    count++;
-
-    if (count == 10000) {
-      gStartTimerFlag = 0;
-    }
   } else {
     I2C_PORT |= _BV(SCL_PIN);
   }
@@ -122,6 +114,5 @@ void stop_I2C() {
 
 void loop() {
   start_I2C(0x4a, 0x6D, 1);
+//  test1();
 }
-
-//  start_I2C(0x4a, 0x6D, 1);
