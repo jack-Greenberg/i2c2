@@ -5,7 +5,7 @@
 
 #define BAUD_STD            100000
 #define BAUD_FULL           400000
-#define PRESCALER           8
+#define PRESCALER           1
 
 #define ADDRESS_LENGTH      7
 
