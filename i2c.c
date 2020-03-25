@@ -68,17 +68,18 @@ ISR(TIMER1_COMPA_vect)
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
 	// Start condition
-	// 1. Set SDA low
-	// 2. Start timer
-	// 3. Let SDA rise back to high
+	// Defined by a high-low transition of SDA while SCL is high
 	I2C_PORT &= ~_BV(SDA_PIN);
+	I2C_delay();
+	I2C_PORT &= ~_BV(SCL_PIN);
+	globalTimerFlag = 0;
+	I2C_delay();
 	gStartTimerFlag = 1;
-	set_SDA(1);
 
 	// Transmit address of secondary
 	int bit;
-	for (int i = ADDRESS_LENGTH; i >= 0; i--) {
-		bit = bit_is_set(secondary_address, i);
+	for (int i = ADDRESS_LENGTH; i > 0; i--) {
+		bit = bit_is_set(secondary_address, i - 1);
 		set_SDA(bit);
 	}
 
@@ -94,8 +95,8 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	}
 
 	// Transmit register of secondary
-	for (int i = 8; i >= 0; i--) {
-		bit = bit_is_set(secondary_register, i);
+	for (int i = 8; i > 0; i--) {
+		bit = bit_is_set(secondary_register, i - 1);
 		set_SDA(bit);
 	}
 
@@ -107,7 +108,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 }
 
 int read_ACK_NACK(void) {
-	while()
+	/* while() */
 	int ack = bit_is_set(I2C_PORT, SDA_PIN); // Ack of 1 means acknowledged
 	// Or should it be reversed, like Unix (0 is OK, 1 is err...)
 	// That is how it is for the start_I2C function right now...
@@ -154,7 +155,14 @@ void transmit_I2C(int msg[], int msg_length) {
 }
 
 void stop_I2C(void) {
-	// Stop clock
-	// set clockline high
-	// set dataline high
+	// Stop condition
+	// Defined by a low-high transition of SDA while SCL is high
+
+	I2C_PORT &= ~_BV(SDA_PIN);
+	I2C_delay();
+	gStartTimerFlag = 0;
+	I2C_delay();
+	I2C_PORT |= _BV(SCL_PIN);
+	I2C_delay();
+	I2C_PORT |= _BV(SDA_PIN);
 }
