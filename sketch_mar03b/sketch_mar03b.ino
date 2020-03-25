@@ -7,8 +7,8 @@
 #define BAUD_FULL           400000
 #define PRESCALER           1
 
-#define ADDRESS_LENGTH      7
-#define REGISTER_LENGTH     8
+#define ADDRESS_LENGTH      2
+#define REGISTER_LENGTH     2
 
 #define WRITE               0
 #define READ                1
@@ -46,9 +46,9 @@ void setup() {
 
   sei(); // Reenable interrupts
 
-  gStartTimerFlag = 1;
+//  gStartTimerFlag = 1;
 
-  Serial.begin(19200);
+//  Serial.begin(19200);
 }
 
 int set_SDA(int bit) {
@@ -68,51 +68,59 @@ int read_SDA() {
 
 ISR(TIMER1_COMPA_vect)
 {
-  if (gStartTimerFlag) {
+  if (gStartTimerFlag == 1) {
     I2C_PORT ^= _BV(SCL_PIN);
     globalTimerFlag ^= 1;
   } else {
     I2C_PORT |= _BV(SCL_PIN);
   }
-
-  if (globalTimerFlag && !control) {
-    // Don't do anything becase SCL is high
-
- //   I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA_PIN);
-    // unless you are reading ACK/NACK
-  } else {
-    
-  }
 }
 
-void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
-  // wait until clock line is high then set data line to low, then initiate start condition
+void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) { 
   I2C_PORT &= ~_BV(SDA_PIN);
-//  I2C_delay();
+  I2C_delay();
+  I2C_PORT &= ~_BV(SCL_PIN);
+  globalTimerFlag = 0;
+  I2C_delay();
+//  I2C_PORT |= _BV(SDA_PIN);
   gStartTimerFlag = 1;
-  I2C_PORT |= _BV(SDA_PIN);
-
-  int cur_bit;
+  
   // write the address
   for (int i = ADDRESS_LENGTH; i > 0; i--) {
-    cur_bit = bit_is_set(secondary_address, i);
+    int cur_bit = bit_is_set(secondary_address, i - 1);
     set_SDA(cur_bit);
   }
 
   set_SDA(mode);
   // write the register
   for (int i = REGISTER_LENGTH; i > 0; i--) {
-    cur_bit = bit_is_set(secondary_register, i);
+    int cur_bit = bit_is_set(secondary_register, i - 1);
     set_SDA(cur_bit);
   }
 }
 
 void stop_I2C() {
-  set_SDA(1);
+  I2C_PORT &= ~_BV(SDA_PIN);
+  I2C_delay();
   gStartTimerFlag = 0;
+  I2C_delay();
+  I2C_PORT |= _BV(SCL_PIN);
+  I2C_delay();
+  I2C_PORT |= _BV(SDA_PIN);
 }
 
 void loop() {
-  start_I2C(0x4a, 0x6D, 1);
-//  test1();
+  start_I2C(0x3, 0x1, 1); // 11101
+
+  for (int i = 0; i < 10; i++)
+  {
+    __asm("nop");
+  }
+
+  stop_I2C();
+
+  for (int i = 0; i < 100; i++)
+  {
+    __asm("nop");
+  }
 }
