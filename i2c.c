@@ -106,7 +106,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	}
 }
 
-void repeated_start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
+void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	/*** START CONDITION ***/
 	
 	// Stall while 'phantom timer' is low until it goes high
@@ -145,42 +145,43 @@ void repeated_start_I2C(uint8_t secondary_address, uint8_t secondary_register, i
 }
 
 
-void transmit_I2C(int msg[], int msg_length) {
-	// for each byte in msg_length
-	//  for i in 0:7
-	//  if bit_is_set(msg, _BV(i)):
-	//   Data line high // PORTB |= _BV(PB0)
-	//  else
-	//   Data line low
-	//  Data line high
-	//  Read ACK/NACK
-	//  if NACK
-	//  Try 10 times
-	//   if unsuccessful stop
-	// stop
-	
+void transmit_I2C(uint8_t secondary_address, uint8_t secondary_register, int msg[], int msg_length) {
+	// write data over SDA
+
+	// begin the I2C protocol in write mode
+	start_I2C(secondary_address, secondary_register, 0);
+
+	int attempts;
+	int ERR;
+
+	// loop through message
 	for (int i = 0; i < msg_length; i++) {
-		for (int j = 0; j < 7; j++) {
-			if (bit_is_set(msg, _BV(j))) {
-				// set data line high
-			} else {
-				// set data line low
+		attempts = 0;
+		// attempt 10 times if there is an error
+		do {
+			for (int j = 0; j < 7; j++) {
+				if (bit_is_set(msg, _BV(j))) {
+					// set data line high
+					set_SDA(1);
+				} else {
+					// set data line low
+					set_SDA(0);
+				}
 			}
-		}	
+			ERR = read_ACK_NACK();
+			attempts++;	
+		} while (ERR && attempts < 10);
+
+		if (ERR) {
+			// attempted 10 times and error still holds true
+			stop_I2C();
+			break;
+		}
 	}
-	// set dataline high
-	
-	int ERR = read_ACK_NACK();
-	int try_again = 0;
-	if (ERR == 1 && try_again < 10) {
-		// try again
-		try_again++;
-	} else if (try_again == 10) {
-		stop_I2C();
-	} else {
-		try_again = 0;
-	}
+	// finish I2C protocol
+	stop_I2C();
 }
+	
 
 int set_SDA(int bit) {
 	// Stall until SCL is low
@@ -198,14 +199,17 @@ int set_SDA(int bit) {
 }
 
 
-int read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes) {
+void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes) {
 	// reads bits from data line one byte at a time
 	// read_pointer points to an element of an array of bytes
 	// bytes is the number of bytes to read
 	// returns 0 for failure, 1 for success
 
+	// begin the I2C protocol in write mode
+	start_I2C(secondary_address, secondary_register, 0);
+
 	// create a repeated start to start i2c in read mode
-	repeated_start_I2C(secondary_address, secondary_register, 1);
+	repeated_start_I2C(secondary_address, 1);
 
 	// count tracks how many bytes we've read
 	int count = 0;
@@ -217,7 +221,7 @@ int read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *rea
 		// error with trying to read more bytes than the buffer can handle
 		if (count >= bytes) {
 			// TODO: SEND NACK BIT HERE
-			return 0;
+			stop_I2C();
 		}
 
 		// TODO: SEND ACK BIT HERE
@@ -226,7 +230,7 @@ int read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *rea
 		read_pointer++;
 		count++;
 	}
-	return 1;
+	stop_I2C();
 }
 
 uint8_t get_byte(void) {
@@ -258,7 +262,7 @@ void send_ACK(void) {
 	// TODO: SEND AN ACK SIGNAL TO SECONDARY WHEN READING
 }
 
-void send_ACK(void) {
+void send_NACK(void) {
 	// TODO: SEND A NACK SIGNAL TO SECONDARY IF ERROR WHEN
 }
 
