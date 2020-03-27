@@ -149,7 +149,7 @@ void transmit_I2C(uint8_t secondary_address, uint8_t secondary_register, int msg
 	// write data over SDA
 
 	// begin the I2C protocol in write mode
-	start_I2C(secondary_address, secondary_register, 0);
+	start_I2C(secondary_address, secondary_register, WRITE);
 
 	int attempts;
 	int ERR;
@@ -160,13 +160,7 @@ void transmit_I2C(uint8_t secondary_address, uint8_t secondary_register, int msg
 		// attempt 10 times if there is an error
 		do {
 			for (int j = 0; j < 7; j++) {
-				if (bit_is_set(msg, _BV(j))) {
-					// set data line high
-					set_SDA(1);
-				} else {
-					// set data line low
-					set_SDA(0);
-				}
+				set_SDA(bit_is_set(msg, j));
 			}
 			ERR = read_ACK_NACK();
 			attempts++;	
