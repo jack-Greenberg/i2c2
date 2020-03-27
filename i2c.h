@@ -17,6 +17,8 @@
 #define SDA_PIN                         PB2
 #define SCL_PIN                         PB3
 
+#define MAX_READ_BYTES      32
+
 void init_I2C(int baud_rate);
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode);
