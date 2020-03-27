@@ -7,11 +7,11 @@
 #define BAUD_FULL           400000
 #define PRESCALER           1
 
-#define ADDRESS_LENGTH      2
-#define REGISTER_LENGTH     2
+#define ADDRESS_LENGTH      7
+#define REGISTER_LENGTH     8
 
-#define WRITE               0
-#define READ                1
+#define WRITE               0x0
+#define READ                0x1
 
 #define I2C_PORT_DIRECTION_REGISTER     DDRB
 #define I2C_PORT                        PORTB
@@ -21,8 +21,8 @@
 #define BIT_MASK 0x1;
 
 volatile uint8_t globalTimerFlag = 0x01;   // 1 means the clock is high, 0 means clock is low
-volatile uint8_t gStartTimerFlag = 0;
-uint8_t *startTimerFlagPtr = &gStartTimerFlag;
+volatile uint8_t gStartTimerFlag = 0x00;
+volatile uint8_t internalTimerFlag = 0x00;
 uint8_t control = 0x01;
 
 void I2C_delay(void) {}
@@ -46,14 +46,12 @@ void setup() {
 
   sei(); // Reenable interrupts
 
-//  gStartTimerFlag = 1;
-
 //  Serial.begin(19200);
 }
 
-int set_SDA(int bit) {
+int set_SDA(uint8_t b) {
   while(globalTimerFlag);
-  if (bit) {
+  if (b) {
     I2C_PORT |= _BV(SDA_PIN);
   } else {
     I2C_PORT &= ~_BV(SDA_PIN);
@@ -68,57 +66,72 @@ int read_SDA() {
 
 ISR(TIMER1_COMPA_vect)
 {
+  internalTimerFlag ^= 0x1;
   if (gStartTimerFlag == 1) {
+    globalTimerFlag ^= 0x1;
     I2C_PORT ^= _BV(SCL_PIN);
-    globalTimerFlag ^= 1;
-  } else {
-    I2C_PORT |= _BV(SCL_PIN);
   }
 }
 
-void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) { 
-  I2C_PORT &= ~_BV(SDA_PIN);
-  I2C_delay();
-  I2C_PORT &= ~_BV(SCL_PIN);
-  globalTimerFlag = 0;
-  I2C_delay();
-//  I2C_PORT |= _BV(SDA_PIN);
-  gStartTimerFlag = 1;
+void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
+  /*** START CONDITION ***/
   
-  // write the address
-  for (int i = ADDRESS_LENGTH; i > 0; i--) {
-    int cur_bit = bit_is_set(secondary_address, i - 1);
-    set_SDA(cur_bit);
+  // Stall while internal timer is low until it goes high
+  while(!internalTimerFlag);
+
+  // Pull down SDA while SCL is high
+  I2C_PORT &= ~_BV(SDA_PIN);
+
+  // SCL should be high, so next time ISR is triggered, SCL will go low
+  globalTimerFlag = 1;
+  gStartTimerFlag = 1;
+
+  /*** END OF START CONDITION ***/
+
+  // Write the address
+  for (int i = ADDRESS_LENGTH - 1; i >= 0; i--) {
+    set_SDA(bit_is_set(secondary_address, i));
   }
 
-  set_SDA(mode);
-  // write the register
-  for (int i = REGISTER_LENGTH; i > 0; i--) {
-    int cur_bit = bit_is_set(secondary_register, i - 1);
-    set_SDA(cur_bit);
+  // Write the mode
+  while(globalTimerFlag);
+  if (mode) {
+    I2C_PORT |= _BV(SDA_PIN);
+  } else {
+    I2C_PORT &= ~_BV(SDA_PIN);
+  }
+  
+  // Write the register
+  for (int i = REGISTER_LENGTH - 1; i >= 0; i--) {
+    set_SDA(bit_is_set(secondary_register, i));
   }
 }
 
 void stop_I2C() {
+  /*** STOP CONDITION ***/
+
+  // Stall while SCL is high until it goes low
+  while(globalTimerFlag);
+
+  // Pull down SDA
   I2C_PORT &= ~_BV(SDA_PIN);
-  I2C_delay();
+
+  // Wait for timer to go high and then stop the timer
+  while(!globalTimerFlag);
   gStartTimerFlag = 0;
-  I2C_delay();
   I2C_PORT |= _BV(SCL_PIN);
-  I2C_delay();
+
+  // Set SDA back to high
+  while(internalTimerFlag);
   I2C_PORT |= _BV(SDA_PIN);
 }
 
 void loop() {
-  start_I2C(0x3, 0x1, 1); // 11101
-
-  for (int i = 0; i < 10; i++)
-  {
-    __asm("nop");
-  }
+  start_I2C(0x35, 0x49, READ); // 11101
 
   stop_I2C();
 
+  // Chill for a bit
   for (int i = 0; i < 100; i++)
   {
     __asm("nop");
