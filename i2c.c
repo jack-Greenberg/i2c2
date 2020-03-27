@@ -203,7 +203,6 @@ void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *re
 	// reads bits from data line one byte at a time
 	// read_pointer points to an element of an array of bytes
 	// bytes is the number of bytes to read
-	// returns 0 for failure, 1 for success
 
 	// begin the I2C protocol in write mode
 	start_I2C(secondary_address, secondary_register, 0);
