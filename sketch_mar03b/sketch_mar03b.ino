@@ -107,6 +107,14 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
   DDRB |= _BV(SDA_PIN);
 }
 
+void transmit_byte(uint8_t msg) {
+  for (int i = 8 - 1; i >= 0; i--) {
+    set_SDA(bit_is_set(msg, i));
+  }
+  int ERR = read_ACK_NACK();
+  DDRB |= _BV(SDA_PIN);
+}
+
 
 
 int read_ACK_NACK(void) { 
@@ -145,14 +153,7 @@ void loop() {
   int ERR, msg;
   start_I2C(0x41, 0x81, WRITE);
 
-  msg = 'H';
-  for (int i = 8 - 1; i >= 0; i--) {
-    set_SDA(bit_is_set(msg, i));
-  }
-  ERR = read_ACK_NACK();
-  DDRB |= _BV(SDA_PIN);
-
-
+  transmit_byte('H');
   
   stop_I2C();
 

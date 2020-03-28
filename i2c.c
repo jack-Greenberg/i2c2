@@ -7,7 +7,6 @@
 volatile uint32_t globalTimerFlag = 0x01;
 uint8_t gStartTimerFlag = 0x00;
 uint8_t internalTimerFlag = 0x00;
-uint8_t control = 0x01;
 
 // buffer for reading data from secondary
 uint8_t read_buffer[MAX_READ_BYTES];
@@ -30,8 +29,8 @@ void init_I2C(int baud_rate)
 
 	// Set the SDA and SCL pins to be outputs
 	// Set pins to be high at the beginning
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA_PIN) | _BV(SCL_PIN);
-	I2C_PORT |= _BV(SDA_PIN) | _BV(SCL_PIN);
+	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA) | _BV(SCL);
+	I2C_PORT |= _BV(SDA) | _BV(SCL);
 
 	// Set Output Compare Register 1A (value the timer compares to to know when to reset)
 	// Baud is multiplied by 2 so that one period is 100kHz in std mode
@@ -51,7 +50,7 @@ ISR(TIMER1_COMPA_vect)
 	// If the timer should be active, then we flip SCL every time, as well as the
 	// globalTimerFlag
 	if (gStartTimerFlag) {
-		I2C_PORT ^= _BV(SCL_PIN);
+		I2C_PORT ^= _BV(SCL);
 		globalTimerFlag ^= 1;
 	}
 }
@@ -64,10 +63,9 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	while(!internalTimerFlag);
 
 	// Pull down SDA while timer is high
-	I2C_PORT &= ~_BV(SDA_PIN);
+	I2C_PORT &= ~_BV(SDA);
 
 	// SCL should be high, so next time ISR is triggered, SCL will go low
-	globalTimerFlag = 1;
 	gStartTimerFlag = 1;
 
 	/*** END OF START CONDITION ***/
@@ -78,16 +76,12 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	}
 
 	// Transmit I2C mode (read/write)
-	// (Inlined because calling set_SDA() had timing issues)
-	while(globalTimerFlag);
-	if (mode) {
-		I2C_PORT |= _BV(SDA_PIN);
-	} else {
-		I2C_PORT &= ~_BV(SDA_PIN);
-	}
+	set_SDA(mode);
 
 	// Listen for ACK/NACK
 	int err = read_ACK_NACK();
+	DDRB |= _BV(SDA);
+
 	if (err) {
 		// TODO: Error handling
 		// Maybe put for loops inside a while loop which says `while (!err) {...`
@@ -100,6 +94,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	}
 
 	err = read_ACK_NACK();
+	DDRB |= _BV(SDA);
 	if (err) {
 		// TODO: Error handling
 		// See above
@@ -113,7 +108,7 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	while(!internalTimerFlag);
 
 	// Pull down SDA while timer is high
-	I2C_PORT &= ~_BV(SDA_PIN);
+	I2C_PORT &= ~_BV(SDA);
 
 	// SCL should be high, so next time ISR is triggered, SCL will go low
 	globalTimerFlag = 1;
@@ -130,9 +125,9 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	// (Inlined because calling set_SDA() had timing issues)
 	while(globalTimerFlag);
 	if (mode) {
-		I2C_PORT |= _BV(SDA_PIN);
+		I2C_PORT |= _BV(SDA);
 	} else {
-		I2C_PORT &= ~_BV(SDA_PIN);
+		I2C_PORT &= ~_BV(SDA);
 	}
 
 	// Listen for ACK/NACK
@@ -145,51 +140,28 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 }
 
 
-void transmit_I2C(uint8_t secondary_address, uint8_t secondary_register, int msg[], int msg_length) {
-	// write data over SDA
-
-	// begin the I2C protocol in write mode
-	start_I2C(secondary_address, secondary_register, WRITE);
-
-	int attempts;
-	int ERR;
-
-	// loop through message
-	for (int i = 0; i < msg_length; i++) {
-		attempts = 0;
-		// attempt 10 times if there is an error
-		do {
-			for (int j = 0; j < 7; j++) {
-				set_SDA(bit_is_set(msg, j));
-			}
-			ERR = read_ACK_NACK();
-			attempts++;	
-		} while (ERR && attempts < 10);
-
-		if (ERR) {
-			// attempted 10 times and error still holds true
-			stop_I2C();
-			break;
-		}
+void transmit_I2C(int msg) {
+	for (int i = MSG_LENGTH - 1; i >= 0; i--) {
+		set_SDA(bit_is_set(msg, i);
 	}
-	// finish I2C protocol
-	stop_I2C();
+	int ERR = read_ACK_NACK();
+	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);	
 }
 	
 
 int set_SDA(int bit) {
 	// Stall until SCL is low
-	while(globalTimerFlag);
+	while(bit_is_set(I2C_PORT, SCL));
 
 	// If bit is 1, set SDA high, else set it low	
 	if (bit) {
-		I2C_PORT |= _BV(SDA_PIN);
+		I2C_PORT |= _BV(SDA);
 	} else {
-		I2C_PORT &= ~_BV(SDA_PIN);
+		I2C_PORT &= ~_BV(SDA);
 	}
 
 	// Stall until SCL is high again, then exit
-	while(!globalTimerFlag);
+	while(bit_is_clear(I2C_PORT, SCL));
 }
 
 
@@ -233,7 +205,7 @@ uint8_t get_byte(void) {
 		// Stall until SCL is high
 		while(!globalTimerFlag);
 		// set the byte
-		byte = (byte >> 7-i) | _BV(SDA_PIN);
+		byte = (byte >> 7-i) | _BV(SDA);
 		// Stall until SCL is low again
 		while(globalTimerFlag);
 	}
@@ -243,12 +215,16 @@ uint8_t get_byte(void) {
 
 // ERROR HANDLING WITH ACK/NACK BIT
 int read_ACK_NACK(void) {
-	/* while() */
-	int ack = bit_is_set(I2C_PORT, SDA_PIN); // Ack of 1 means acknowledged
-	// Or should it be reversed, like Unix (0 is OK, 1 is err...)
-	// That is how it is for the start_I2C function right now...
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA_PIN);
-	return ack;
+	while(bit_is_set(I2C_PORT, SCL)); // Secondary is reading previous value
+
+	// Give up control of SDA
+	I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA);
+	I2C_PORT &= ~_BV(SDA);
+
+	// Read SDA
+	return bit_is_clear(PINB, SDA);
+	// returns 1 (truthy) if ACK
+	// returns 0 (falsey) if NACK
 }
 
 void send_ACK(void) {
@@ -264,17 +240,17 @@ void stop_I2C(void) {
 	/*** STOP CONDITION ***/
 
 	// Stall while SCL is high until it goes low
-	while(globalTimerFlag);
+	while(bit_is_set(I2C_PORT, SCL));
 
 	// Pull down SDA
-	I2C_PORT &= ~_BV(SDA_PIN);
+	I2C_PORT &= ~_BV(SDA);
 
 	// Wait for timer to go high and then stop the timer
-	while(!globalTimerFlag);
+	while(bit_is_clear(I2C_PORT, SCL));
 	gStartTimerFlag = 0;
-	I2C_PORT |= _BV(SCL_PIN);
+	I2C_PORT |= _BV(SCL);
 
 	// Set SDA back to high
 	while(internalTimerFlag);
-	I2C_PORT |= _BV(SDA_PIN);
+	I2C_PORT |= _BV(SDA);
 }

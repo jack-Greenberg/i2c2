@@ -12,10 +12,12 @@
 #define WRITE               0
 #define READ                1
 
+#define MSG_LENGTH			8 // 8 bits or 1 byte
+
 #define I2C_PORT_DIRECTION_REGISTER     DDRB
 #define I2C_PORT                        PORTB
-#define SDA_PIN                         PB2
-#define SCL_PIN                         PB3
+#define SDA								PB2 // The pin on the AVR chip
+#define SCL		                        PB3 // The pin on the AVR chip
 
 #define MAX_READ_BYTES      32
 
@@ -24,7 +26,7 @@ void init_I2C(int baud_rate);
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode);
 void repeated_start_I2C(uint8_t secondary_address, int mode);
 
-void transmit_I2C(int msg[], int msg_length);
+void transmit_I2C(int msg);
 int set_SDA(int bit);
 
 void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes);
