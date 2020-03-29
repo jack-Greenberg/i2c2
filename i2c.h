@@ -27,7 +27,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode);
 void repeated_start_I2C(uint8_t secondary_address, int mode);
 
 void transmit_I2C(int msg);
-int set_SDA(int bit);
+void set_SDA(int bit);
 
 void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes);
 uint8_t get_byte(void);
