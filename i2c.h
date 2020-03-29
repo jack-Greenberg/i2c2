@@ -1,5 +1,5 @@
 #include <avr/io.h>
-#include <util/delay.h>
+#include <avr/interrupt.h>
 
 #define F_CPU               16000000UL // Frequency of ATMega328p (16MHz)
 
@@ -8,6 +8,7 @@
 #define PRESCALER           1
 
 #define ADDRESS_LENGTH      7
+#define REGISTER_LENGTH		8
 
 #define WRITE               0
 #define READ                1
@@ -26,7 +27,7 @@ void init_I2C(int baud_rate);
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode);
 void repeated_start_I2C(uint8_t secondary_address, int mode);
 
-void transmit_I2C(int msg);
+void transmit_I2C(uint8_t msg);
 void set_SDA(int bit);
 
 void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes);

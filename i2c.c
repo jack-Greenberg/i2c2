@@ -7,7 +7,7 @@
  */
 
 #include <avr/io.h>
-#include <util/delay.h>
+#include <avr/interrupt.h>
 #include "i2c.h"
 
 #define BIT_MASK 0x1;
@@ -164,7 +164,7 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 void transmit_I2C(uint8_t msg) {
 	int ERR, i;
 	for (i = MSG_LENGTH - 1; i >= 0; i--) {
-		set_SDA(bit_is_set(msg, i);
+		set_SDA(bit_is_set(msg, i));
 	}
 	ERR = read_ACK_NACK();
 	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);	
