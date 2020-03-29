@@ -1,3 +1,11 @@
+/**
+ * I2C2
+ * Implementation of I2C (Inter-Integrated Chip) protocol in C
+ *
+ * Authors: Jack Greenberg, David Tarazi
+ * Date: 2020-04-03
+ */
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include "i2c.h"
@@ -8,13 +16,18 @@ volatile uint32_t globalTimerFlag = 0x01;
 uint8_t gStartTimerFlag = 0x00;
 uint8_t internalTimerFlag = 0x00;
 
-// buffer for reading data from secondary
+// Buffer for reading data from secondary
 uint8_t read_buffer[MAX_READ_BYTES];
 
 // EXAMPLE OF WHAT POINTER WOULD LOOK LIKE
 // buffer pointer to start of read buffer to update the read buffer in function
 // uint8_t *read_pointer = &read_buffer[0];
 
+/**
+ * Initializes timer and interrupts
+ *
+ * @param data_rate   transmission rate/frequency (STD is 100kHz, FAST is 400kHz)
+ */
 void init_I2C(int baud_rate)
 {
 	// Stop interrupts and reset Timer 1
@@ -40,7 +53,7 @@ void init_I2C(int baud_rate)
 	sei();
 }
 
-// This interrupt sets a global flag to be used by other functions (like setting the clock)
+// Interrupt Service Routine for 'phantom clock' and SCL pin
 ISR(TIMER1_COMPA_vect)
 {
 	// internalTimerFlag is a 'phantom clock' that is used for timing in the
@@ -51,12 +64,23 @@ ISR(TIMER1_COMPA_vect)
 	// globalTimerFlag
 	if (gStartTimerFlag) {
 		I2C_PORT ^= _BV(SCL);
-		globalTimerFlag ^= 1;
 	}
 }
 
-
+/** 
+ * Responsible for sending
+ * - Start condition
+ * - Address of secondary
+ * - Mode (read/write)
+ * - Register of secondary
+ *
+ * @param secondary_address    address of secondary device
+ * @param secondary_register   register of secondary device
+ * @param mode                 READ (1) or WRITE (0)
+ */
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
+	int ERR, i;
+
 	/*** START CONDITION ***/
 	
 	// Stall while 'phantom timer' is low until it goes high
@@ -71,7 +95,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	/*** END OF START CONDITION ***/
 
 	// Transmit address of secondary
-	for (int i = ADDRESS_LENGTH - 1; i >= 0; i--) {
+	for (i = ADDRESS_LENGTH - 1; i >= 0; i--) {
 		set_SDA(bit_is_set(secondary_address, i));
 	}
 
@@ -79,23 +103,16 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	set_SDA(mode);
 
 	// Listen for ACK/NACK
-	int err = read_ACK_NACK();
-	DDRB |= _BV(SDA);
-
-	if (err) {
-		// TODO: Error handling
-		// Maybe put for loops inside a while loop which says `while (!err) {...`
-		// so that ACK/NACK will actually do error handling	
-	}
+	ERR = read_ACK_NACK();
 
 	// Transmit register of secondary
-	for (int i = REGISTER_LENGTH - 1; i >= 0; i--) {
+	for (i = REGISTER_LENGTH - 1; i >= 0; i--) {
 		set_SDA(bit_is_set(secondary_register, i));
 	}
 
-	err = read_ACK_NACK();
-	DDRB |= _BV(SDA);
-	if (err) {
+	ERR = read_ACK_NACK();
+	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
+	if (ERR) {
 		// TODO: Error handling
 		// See above
 	}
@@ -139,17 +156,27 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	}
 }
 
-
-void transmit_I2C(int msg) {
-	for (int i = MSG_LENGTH - 1; i >= 0; i--) {
+/**
+ * Transmits one byte of information and performs error checking (ACK/NACK)
+ *
+ * @param msg   8 bit message to be sent
+ */
+void transmit_I2C(uint8_t msg) {
+	int ERR, i;
+	for (i = MSG_LENGTH - 1; i >= 0; i--) {
 		set_SDA(bit_is_set(msg, i);
 	}
-	int ERR = read_ACK_NACK();
+	ERR = read_ACK_NACK();
 	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);	
+	while(bit_is_clear(I2C_PORT, SCL));
 }
 	
-
-int set_SDA(int bit) {
+/**
+ * Sets SDA line high or low
+ *
+ * @param bit   the bit to set SDA at
+ */
+void set_SDA(int bit) {
 	// Stall until SCL is low
 	while(bit_is_set(I2C_PORT, SCL));
 
@@ -213,7 +240,11 @@ uint8_t get_byte(void) {
 }
 
 
-// ERROR HANDLING WITH ACK/NACK BIT
+/**
+ * Performs error checking after byte is transmitted
+ *
+ * @return   1 if ACK, 0 if NACK
+ */ 
 int read_ACK_NACK(void) {
 	while(bit_is_set(I2C_PORT, SCL)); // Secondary is reading previous value
 
@@ -235,7 +266,9 @@ void send_NACK(void) {
 	// TODO: SEND A NACK SIGNAL TO SECONDARY IF ERROR WHEN
 }
 
-
+/**
+ * Issues stop condition to secondary and stops SCL
+ */
 void stop_I2C(void) {
 	/*** STOP CONDITION ***/
 
