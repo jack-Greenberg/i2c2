@@ -3,8 +3,8 @@
 
 #define F_CPU               16000000UL // Frequency of ATMega328p (16MHz)
 
-#define BAUD_STD            100000
-#define BAUD_FULL           400000
+#define BITRATE_STD         100000
+#define BITRATE_FAST        400000
 #define PRESCALER           1
 
 #define ADDRESS_LENGTH      7
@@ -22,7 +22,7 @@
 
 #define MAX_READ_BYTES      32
 
-void init_I2C(int baud_rate);
+void init_I2C(int bitrate);
 
 void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode);
 void repeated_start_I2C(uint8_t secondary_address, int mode);

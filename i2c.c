@@ -28,7 +28,7 @@ uint8_t read_buffer[MAX_READ_BYTES];
  *
  * @param data_rate   transmission rate/frequency (STD is 100kHz, FAST is 400kHz)
  */
-void init_I2C(int baud_rate)
+void init_I2C(int bitrate)
 {
 	// Stop interrupts and reset Timer 1
 	cli();

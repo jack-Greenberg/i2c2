@@ -2,7 +2,7 @@
 
 int main(void)
 {
-	init_I2C(BAUD_STD);
+	init_I2C(BITRATE_STD);
 
 	while(1) {
 		start_I2C(0x41, 0x81, WRITE);
