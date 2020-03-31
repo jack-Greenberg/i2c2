@@ -5,6 +5,7 @@
 !*.*
 !resources/
 !reports/
+!data/
 !Makefile
 !sketch_mar03b/
 # Prerequisites
