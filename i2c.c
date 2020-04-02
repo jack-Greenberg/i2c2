@@ -47,7 +47,7 @@ void init_I2C(int bitrate)
 
 	// Set Output Compare Register 1A (value the timer compares to to know when to reset)
 	// Baud is multiplied by 2 so that one period is 100kHz in std mode
-	OCR1A = F_CPU / (PRESCALER * (BAUD_STD * 2));
+	OCR1A = F_CPU / (PRESCALER * (BITRATE_STD * 2));
 
 	// Reenable interrupts
 	sei();
