@@ -72,13 +72,13 @@ For messages, we chose for our transmit messages by encoding them into 8-bit ASC
 
 As we break down the code, there are a few important features. First of all, we used an interupt-based system with a clock interval we set up in order to reach a timer frequency that would reset at a standard I2C frequency. Then, we had to write in the functionality for which device had control of the data line at any given time, which we didn't realize the importance of at first. When writing into another device's register, the primary device has control for the first 8 bits, but then has to give control up so that the secondary device can send an ACK or NACK bit back to indicate a successful transmission or not. To implement all of this in an integrated program, we chose to split our functionality into a few key functions:
     
-    * *init_I2C()*: basic setup (ports, timer, interupts)
-    * *ISR*: interupt service routine that flips the clock from high to low and vise versa
-    * *start_I2C()*: sends the start condition for a transmission and indicated which secondary device and register to target
-    * *transmit_I2C()*: sends a byte over SDA to secondary register
-    * *read_ACK_NACK()*: reads the ACK/NACK bit from the secondary after each transmitted byte
-    * *read_SDA()*: **unfinished** but intended to read a byte from the secondary register
-    * *stop_I2C()*: sends the stop condition indicating the end of a transmission
+ - *init_I2C()*: basic setup (ports, timer, interupts)
+ - *ISR*: interupt service routine that flips the clock from high to low and vise versa
+ - *start_I2C()*: sends the start condition for a transmission and indicated which secondary device and register to target
+ - *transmit_I2C()*: sends a byte over SDA to secondary register
+ - *read_ACK_NACK()*: reads the ACK/NACK bit from the secondary after each transmitted byte
+ - *read_SDA()*: **unfinished** but intended to read a byte from the secondary register
+ - *stop_I2C()*: sends the stop condition indicating the end of a transmission
 
 Based on this outline, the init_I2C() function and ISR are pretty reasonably easy to read through, but essential to functionality. Diving into the start_I2C() function, a start condition happens when the data line (SDA) is pulled down while the clock is high. Following this shift, the primary can then specify the device address and register address to target for a read/write. Below is part of the start_I2C function where we pull SDA down while the clock is high, allowing us to begin writing bits.
 ```c++
