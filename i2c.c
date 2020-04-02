@@ -110,11 +110,12 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 		set_SDA(bit_is_set(secondary_register, i));
 	}
 
+	// gives up control of SDA, reads ACK or NACK
 	ERR = read_ACK_NACK();
+	// regain control of SDA
 	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
 	if (ERR) {
-		// TODO: Error handling
-		// See above
+		// Error handling
 	}
 }
 
@@ -246,6 +247,7 @@ uint8_t get_byte(void) {
  * @return   1 if ACK, 0 if NACK
  */ 
 int read_ACK_NACK(void) {
+	
 	while(bit_is_set(I2C_PORT, SCL)); // Secondary is reading previous value
 
 	// Give up control of SDA
