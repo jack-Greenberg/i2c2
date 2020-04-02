@@ -71,6 +71,7 @@ For messages, we chose for our transmit messages by encoding them into 8-bit ASC
 ## 6 Important Functions
 
 As we break down the code, there are a few important features. First of all, we used an interupt-based system with a clock interval we set up in order to reach a timer frequency that would reset at a standard I2C frequency. Then, we had to write in the functionality for which device had control of the data line at any given time, which we didn't realize the importance of at first. When writing into another device's register, the primary device has control for the first 8 bits, but then has to give control up so that the secondary device can send an ACK or NACK bit back to indicate a successful transmission or not. To implement all of this in an integrated program, we chose to split our functionality into a few key functions:
+    
     * *init_I2C()*: basic setup (ports, timer, interupts)
     * *ISR*: interupt service routine that flips the clock from high to low and vise versa
     * *start_I2C()*: sends the start condition for a transmission and indicated which secondary device and register to target
