@@ -146,7 +146,7 @@ Then, in order to check for reading errors, we would need the primary to send an
 
 To view the source code, you can find it on Github [here](https://github.com/jack-greenberg/SoftSysI2C2) in the documents i2c.c and i2c.h.
 
-## Reflection
+## 7 Reflection
 
 In the end, this was a successful project. Our MVP was to have two Arduinos communicate with one another via I2C, and while we weren't able to do this because we didn't have the necessary equipment after departing Olin, we *were* able to get an Analog Discovery to read "Hello world" from an Arduino, so we consider that a success. It would have been nice to get a `read` function working as well, but it would have required a lot more time than we had.
 
