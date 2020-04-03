@@ -1,11 +1,11 @@
 # Implementing I2C in C with Arduino
 Jack Greenberg and David Tarazi
 
-## 1 Project Goals
+## 1. Project Goals
 When we started with the project, our MVP was to get a couple of Arduinos communicating over a standard I2C communication protocol that we would write ourselves. We wanted to at least have a (somewhat) robust way to write a register and hoped to be able to read registers from the secondary device. While we didn't fully test and implement reading the secondary device, we were able to send a "Hello World" message from one device to another using our own implementation of the standard I2C protocol. As a reach, we hoped to be able to read values from a sensor and then send that data over to another device for a display. While we were close to this point, we never fully got there.
 
 
-## 2 Learning Goals
+## 2. Learning Goals
 
 ### Jack
 
@@ -16,7 +16,7 @@ My main goal was to become more comfortable writing and debugging firmware, and 
 I have worked with some embedded systems before, but never really understood what was happening at a low level when implementing sensors and reading those values. I wanted to learn more about how communication worked and how the software and hardware interacted in order to make the communication possible. I think I learned a lot about how these systems work and as an unforeseen learning experience, it was interesting to try to debug the system when it was operating on such a quick clock cycle time. Learning about how a single line or call to a function could cause errors with the communication timing made me so appreciative of the standard protocols already in place.
 
 
-## 3 Useful Resources
+## 3. Useful Resources
 
 The main resource we used for this project was a document from Texas Instruments entitled [*Understanding the I<sup>2</sup>C Bus*](https://www.ti.com/lit/an/slva704/slva704.pdf). The document details exactly how the I2C protocol works, including a range of topics from the details of the open-drain/open-collector electrical system to transmitting addresses and performing simple error checking with ACK/NACK.
 
@@ -25,11 +25,14 @@ We also used a document called [I2C Bus Pullup Resistor Calculation](http://www.
 [This PDF](https://github.com/jack-greenberg/SoftSysI2C2/blob/master/resources/Timers.pdf) is a great guide to understanding AVR timers. There are a lot of ways to configure timers to get them to operate at the correct frequency.
 
 
-## 4 Final Product
+## 4. Final Product
 
 In the end, our code was able to transmit "Hello world" from an Arduino to be read by an Analog Discovery!
 
-<figure align="center" width="50%"><img src="../documents/hello-world.png" /><figcaption>"Hello world" shown on an Analog Discovery</figcaption></figure>
+<img width="50%" align="center" src="../documents/hello-world.png" />
+"Hello world" shown on an Analog Discovery
+
+
 
 The final code in `i2c.c` includes a `transmit_I2C` function that allows you to transmit a byte from a primary to a secondary device. There is also a framework for a `read_I2C` function that would allow you to read data from a secondary device, but we didn't have time to test it. 
 
@@ -39,25 +42,21 @@ One issue with the code as it is right now is that it is a bit inconsistent, mea
 
 ### Image Gallery
 
-<div align="center">
-    <figure>
-        <img width="50%" src="../documents/schematic.png" />
-    	<figcaption>Schematic of I2C Bus</figcaption>
-    </figure>
-    <br />
-    <figure>
-        <img width="50%" src="../data/scl.png" />
-    	<figcaption>Fairly stable SCL (clock line) signal at 100kHz</figcaption>
-    </figure>
-    <br />
-    <figure>
-        <img width="50%" src="../data/address.png" />
-    	<figcaption>Transmission of address over I2C (0110101)</figcaption>
-    </figure>
-</div>
 
 
-## 5 Design Decisions
+<img width="50%" src="../documents/schematic.png" />
+
+<div style="text-align:center">Schematic of I2C Bus</div>
+
+<img width="50%" src="../data/scl.png" />
+
+<img width="50%" src="../data/address.png" />
+
+
+
+
+
+## 5. Design Decisions
 
 ### Timer
 
@@ -68,7 +67,7 @@ For the timer, we chose to use CTC (clear timer on compare) mode. This was in pa
 For messages, we chose for our transmit messages by encoding them into 8-bit ASCII codes. By using 8-bit, we could ensure that we would always be on a multiple of the I2C protocol and have the information coming through accurately. We chose to transmit characters one byte at a time to enable easy debugging and be able to see the letters coming through one at a time for analysis and looking at the timing of each bit's trasmission. In the future, we would wrap the single byte transmission into a function that could take a string and then transmit the whole string character by character or with a larger sequence for efficiency by reducing function calls which might actually matter with the time scale we are looking at.
 
 
-## 6 Important Functions
+## 6. Important Functions
 
 As we break down the code, there are a few important features. First of all, we used an interupt-based system with a clock interval we set up in order to reach a timer frequency that would reset at a standard I2C frequency. Then, we had to write in the functionality for which device had control of the data line at any given time, which we didn't realize the importance of at first. When writing into another device's register, the primary device has control for the first 8 bits, but then has to give control up so that the secondary device can send an ACK or NACK bit back to indicate a successful transmission or not. To implement all of this in an integrated program, we chose to split our functionality into a few key functions:
     
@@ -146,7 +145,7 @@ Then, in order to check for reading errors, we would need the primary to send an
 
 To view the source code, you can find it on Github [here](https://github.com/jack-greenberg/SoftSysI2C2) in the documents i2c.c and i2c.h.
 
-## 7 Reflection
+## 7. Reflection
 
 In the end, this was a successful project. Our MVP was to have two Arduinos communicate with one another via I2C, and while we weren't able to do this because we didn't have the necessary equipment after departing Olin, we *were* able to get an Analog Discovery to read "Hello world" from an Arduino, so we consider that a success. It would have been nice to get a `read` function working as well, but it would have required a lot more time than we had.
 
