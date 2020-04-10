@@ -3,9 +3,9 @@
 
 #define F_CPU               16000000UL // Frequency of ATMega328p (16MHz)
 
-#define BITRATE_STD         100000
-#define BITRATE_FAST        400000
-#define PRESCALER           1
+#define BITRATE_STD         100000UL
+#define BITRATE_FAST        400000UL
+#define PRESCALER           8
 
 #define ADDRESS_LENGTH      7
 #define REGISTER_LENGTH		8
@@ -17,10 +17,8 @@
 
 #define I2C_PORT_DIRECTION_REGISTER     DDRB
 #define I2C_PORT                        PORTB
-#define SDA								PB2 // The pin on the AVR chip
-#define SCL		                        PB3 // The pin on the AVR chip
-
-#define MAX_READ_BYTES      32
+#define SDA								PB4 // The pin on the AVR chip
+#define SCL		                        PB5 // The pin on the AVR chip
 
 void init_I2C(int bitrate);
 

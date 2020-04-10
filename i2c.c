@@ -2,7 +2,7 @@
  * I2C2
  * Implementation of I2C (Inter-Integrated Chip) protocol in C
  *
- * Authors: Jack Greenberg, David Tarazi
+ * Authors: Jack Greenberg, Manu Patil, David Tarazi
  * Date: 2020-04-03
  */
 
@@ -15,13 +15,6 @@
 volatile uint32_t globalTimerFlag = 0x01;
 uint8_t gStartTimerFlag = 0x00;
 uint8_t internalTimerFlag = 0x00;
-
-// Buffer for reading data from secondary
-uint8_t read_buffer[MAX_READ_BYTES];
-
-// EXAMPLE OF WHAT POINTER WOULD LOOK LIKE
-// buffer pointer to start of read buffer to update the read buffer in function
-// uint8_t *read_pointer = &read_buffer[0];
 
 /**
  * Initializes timer and interrupts
@@ -36,18 +29,23 @@ void init_I2C(int bitrate)
 	TCCR1B = 0;
 	TCNT1 = 0;
 
-	TCCR1B |= _BV(WGM12); // CTC mode
-	TCCR1B |= _BV(CS10); // PRESCALER 1
-	TIMSK1 |= _BV(OCIE1A); // Enable interrupts on channel 1A
+    // PWM, phase correct, TOP is OCR1A
+	TCCR1A |= _BV(WGM10) | _BV(WGM11); 
+	TCCR1B |= _BV(WGM13); 
+
+    // Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
+    TCCR1A |= _BV(COM1A0); 
+
+    // Clock prescaler 8
+    TCCR1B |= _BV(CS11);
+
+	// Set Output Compare Register 1A (value the timer compares to to know when to reset)
+	OCR1A = F_CPU / (PRESCALER * (BITRATE_STD * 4));
 
 	// Set the SDA and SCL pins to be outputs
 	// Set pins to be high at the beginning
 	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA) | _BV(SCL);
 	I2C_PORT |= _BV(SDA) | _BV(SCL);
-
-	// Set Output Compare Register 1A (value the timer compares to to know when to reset)
-	// Baud is multiplied by 2 so that one period is 100kHz in std mode
-	OCR1A = F_CPU / (PRESCALER * (BITRATE_STD * 2));
 
 	// Reenable interrupts
 	sei();
