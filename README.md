@@ -1,26 +1,49 @@
-# I2C2 (I2C in C)
-Jack Greenberg and David Tarazi
+# I2C2
 
-## Links
-* [Trello](https://trello.com/b/Ed0RLSGK/i2c2)
+A light-weight I2C library written in C.
 
-## Functions
-* `init_I2C()`
-	* Initializes the timer and interrupts
-* `start_I2C()`
-	* Sends __1.__ start condition, __2.__ address of secondary, __3.__ mode (read/write), and __4.__ register of secondary
-* `transmit_I2C()`
-	* Responsible for sending one byte of data via I2C and performing error handling (ACK/NACK).
-* `stop_I2C()`
-	* Sends stop condition to terminate communication
+## Installation
 
-## Reports
-* [Initial proposal](https://github.com/jack-Greenberg/SoftSysI2C2/tree/master/reports/proposal.md)
-* [Project update](https://github.com/jack-Greenberg/SoftSysI2C2/blob/master/reports/update.md)
-* <span style="color: #888">__Final report...__</span>
+```bash
+$ git clone https://github.com/jack-greenberg/i2c2/
 
-## Resources
-* [Understanding the I2C Bus](https://www.ti.com/lit/an/slva704/slva704.pdf) - Texas Instruments, 2015
-* [ATmega 328P Datasheet](http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf) - Atmel
-* [I2C Bus Pullup Resistor Calculation](http://www.ti.com/lit/an/slva689/slva689.pdf) - Texas Instruments, 2015
-* [Newbie's Guide to AVR Timers](https://github.com/jack-Greenberg/SoftSysI2C2/blob/master/resources/Timers.pdf) - Dean Camera, 2016
+$ cd i2c2
+
+$ make
+```
+
+## Usage
+
+Edit `i2c.h` to update the `SDA` and `SCL` macros to match the pins on your MCU.
+
+```C
+#define SDA			PB2
+#define SCL			PB3
+```
+
+Then, in your file, you can use the functions.
+
+```C
+int main(void) {
+	init_I2C(BITRATE_STD); // Initializes timer and interrupts at 100kHz (use BITRATE_FAST for 400kHz)
+	
+	start_I2C(0x41, 0x81, WRITE); // Sends start condition and transmits address and register of secondary address
+
+	transmit_I2C('H');
+	transmit_I2C('e');
+	// ...
+	transmit_I2C('d');
+	
+	stop_I2C();
+
+	return 0;
+}
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
