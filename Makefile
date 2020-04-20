@@ -8,7 +8,7 @@ SRCS=main.c
 PROGRAMMER=arduino
 
 flash: main.hex
-	avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${HELLOWORLDTARGET}.hex:i -F -P usb
+	avrdude -p ${MCU} -c ${PROGRAMMER} -U flash:w:${TARGET}.hex:i -F -P /dev/ttyACM0
 
 main.hex: i2c.o libi2c.a main.o
 	${CC} ${CFLAGS} ${SRCS} -L. -li2c -o ${TARGET}.elf

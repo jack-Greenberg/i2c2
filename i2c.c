@@ -30,11 +30,11 @@ void init_I2C(int bitrate)
 	TCNT1 = 0;
 
     // PWM, phase correct, TOP is OCR1A
-	TCCR1A |= _BV(WGM10) | _BV(WGM11); 
-	TCCR1B |= _BV(WGM13); 
+	TCCR1A |= _BV(WGM10) | _BV(WGM11);
+	TCCR1B |= _BV(WGM13);
 
     // Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
-    TCCR1A |= _BV(COM1A0); 
+    TCCR1A |= _BV(COM1A0);
 
     // Clock prescaler 8
     TCCR1B |= _BV(CS11);
@@ -65,7 +65,11 @@ ISR(TIMER1_COMPA_vect)
 	}
 }
 
-/** 
+void start_timer() {
+	gStartTimerFlag = 1;
+}
+
+/**
  * Responsible for sending
  * - Start condition
  * - Address of secondary
@@ -80,7 +84,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	int ERR, i;
 
 	/*** START CONDITION ***/
-	
+
 	// Stall while 'phantom timer' is low until it goes high
 	while(!internalTimerFlag);
 
@@ -119,7 +123,7 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 
 void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	/*** START CONDITION ***/
-	
+
 	// Stall while 'phantom timer' is low until it goes high
 	while(!internalTimerFlag);
 
@@ -151,7 +155,7 @@ void repeated_start_I2C(uint8_t secondary_address, int mode) {
 	if (err) {
 		// TODO: Error handling
 		// Maybe put for loops inside a while loop which says `while (!err) {...`
-		// so that ACK/NACK will actually do error handling	
+		// so that ACK/NACK will actually do error handling
 	}
 }
 
@@ -166,10 +170,10 @@ void transmit_I2C(uint8_t msg) {
 		set_SDA(bit_is_set(msg, i));
 	}
 	ERR = read_ACK_NACK();
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);	
+	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
 	while(bit_is_clear(I2C_PORT, SCL));
 }
-	
+
 /**
  * Sets SDA line high or low
  *
@@ -179,7 +183,7 @@ void set_SDA(int bit) {
 	// Stall until SCL is low
 	while(bit_is_set(I2C_PORT, SCL));
 
-	// If bit is 1, set SDA high, else set it low	
+	// If bit is 1, set SDA high, else set it low
 	if (bit) {
 		I2C_PORT |= _BV(SDA);
 	} else {
@@ -243,9 +247,9 @@ uint8_t get_byte(void) {
  * Performs error checking after byte is transmitted
  *
  * @return   1 if ACK, 0 if NACK
- */ 
+ */
 int read_ACK_NACK(void) {
-	
+
 	while(bit_is_set(I2C_PORT, SCL)); // Secondary is reading previous value
 
 	// Give up control of SDA

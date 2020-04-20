@@ -4,5 +4,6 @@
 
 int main()
 {
-    init_I2C(BITRATE_STD);
+    init_I2C(BITRATE_FULL);
+    start_timer();
 }
