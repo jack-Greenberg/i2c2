@@ -16,6 +16,17 @@ int main()
       // {
       //   __asm("nop");
       // }
+      transmit_I2C('H');
+      transmit_I2C('e');
+      transmit_I2C('l');
+      transmit_I2C('l');
+      transmit_I2C('o');
+      transmit_I2C(' ');
+      transmit_I2C('w');
+      transmit_I2C('o');
+      transmit_I2C('r');
+      transmit_I2C('l');
+      transmit_I2C('d');
 
       stop_I2C();
 
