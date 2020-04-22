@@ -55,32 +55,6 @@ void init_I2C(unsigned long bitrate)
 	sei();
 }
 
-// Interrupt Service Routine for 'phantom clock' and SCL pin
-// ISR(TIMER1_COMPA_vect)
-// {
-// 	// internalTimerFlag is a 'phantom clock' that is used for timing in the
-// 	// start and stop conditions
-// 	internalTimerFlag ^= 0x1;
-//
-// 	TIFR1 |= _BV(OCF1A);
-//
-// 	// If the timer should be active, then we flip SCL every time, as well as the
-// 	// globalTimerFlag
-// 	// if (gStartTimerFlag) {
-// 	// 	I2C_PORT ^= _BV(SCL);
-// 	// }
-// }
-
-void start_timer(void) {
-	// Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
-	TCCR1A |= _BV(COM1A0);
-}
-
-void stop_timer(void) {
-	// Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
-	TCCR1A &= ~_BV(COM1A0);
-}
-
 /**
  * Responsible for sending
  * - Start condition
@@ -137,44 +111,6 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 		// Error handling
 	}
 }
-
-// void repeated_start_I2C(uint8_t secondary_address, int mode) {
-// 	/*** START CONDITION ***/
-//
-// 	// Stall while 'phantom timer' is low until it goes high
-// 	while(bit_is_clear(TIFR1, OCF1A));
-//
-// 	// Pull down SDA while timer is high
-// 	I2C_PORT &= ~_BV(SDA);
-//
-// 	// SCL should be high, so next time ISR is triggered, SCL will go low
-// 	globalTimerFlag = 1;
-// 	gStartTimerFlag = 1;
-//
-// 	/*** END OF START CONDITION ***/
-//
-// 	// Transmit address of secondary
-// 	for (int i = ADDRESS_LENGTH - 1; i >= 0; i--) {
-// 		set_SDA(bit_is_set(secondary_address, i));
-// 	}
-//
-// 	// Transmit I2C mode (read/write)
-// 	// (Inlined because calling set_SDA() had timing issues)
-// 	while(globalTimerFlag);
-// 	if (mode) {
-// 		I2C_PORT |= _BV(SDA);
-// 	} else {
-// 		I2C_PORT &= ~_BV(SDA);
-// 	}
-//
-// 	// Listen for ACK/NACK
-// 	int err = read_ACK_NACK();
-// 	if (err) {
-// 		// TODO: Error handling
-// 		// Maybe put for loops inside a while loop which says `while (!err) {...`
-// 		// so that ACK/NACK will actually do error handling
-// 	}
-// }
 
 /**
  * Transmits one byte of information and performs error checking (ACK/NACK)
@@ -273,18 +209,12 @@ void set_SDA(int bit) {
 int read_ACK_NACK(void) {
 	while(bit_is_set(PINB, SCL)); // Secondary is reading previous value
 
-	// Give up control of SDA
+	// Give up control of SDA, disable internal pull-up resistors
 	I2C_PORT &= ~_BV(SDA);
 	I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA);
-	// I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
 
-	// I2C_PORT |= _BV(SDA);
 	// Read SDA
-	// while(bit_is_clear(PINB, SCL));
-
 	return bit_is_clear(PINB, SDA);
-	// returns 1 (truthy) if ACK
-	// returns 0 (falsey) if NACK
 }
 
 // void send_ACK(void) {
@@ -300,18 +230,20 @@ int read_ACK_NACK(void) {
  */
 void stop_I2C(void) {
 	/*** STOP CONDITION ***/
+
+    // Wait for previous read_ACK_NACK() to be read
 	while(bit_is_set(PINB, SCL));
 	while(bit_is_clear(PINB, SCL));
 
 	// Pull down SDA
 	I2C_PORT &= ~_BV(SDA);
 
-	// Wait for timer to go high and then stop the timer
-	// while(bit_is_clear(I2C_PORT, SCL));
+    // Stop timer
 	TCCR1A &= ~_BV(COM1A0);
+
+    // Set SCL high
 	I2C_PORT |= _BV(SCL);
 
 	// Set SDA back to high
-	// while(bit_is_set(TIFR1, OCF1A));
 	I2C_PORT |= _BV(SDA);
 }
