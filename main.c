@@ -31,7 +31,7 @@ int main()
       stop_I2C();
 
       // Chill for a bit
-      for (int i = 0; i < 200; i++)
+      for (int i = 0; i < 500; i++)
       {
         __asm("nop");
       }
