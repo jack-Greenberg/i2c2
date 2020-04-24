@@ -48,8 +48,8 @@ void init_I2C(unsigned long bitrate)
 	I2C_PORT_DIRECTION_REGISTER = 0;
 	I2C_PORT = 0;
 
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA) | _BV(SCL);
-	I2C_PORT |= _BV(SDA) | _BV(SCL);
+	I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA); // & ~_BV(SCL);
+	DDRB |= _BV(SCL);
 
 	// Reenable interrupts
 	sei();
@@ -72,7 +72,8 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 	/*** START CONDITION ***/
 
 	// Pull down SDA while SCL is high
-	I2C_PORT &= ~_BV(SDA);
+	// PORTB &= ~_BV(SDA);
+	DDRB |= _BV(SDA);
 
 	// Start timer
 	TCCR1A |= _BV(COM1A0); // Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
@@ -89,11 +90,11 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 
 	// Transmit I2C mode (read/write)
 	set_SDA(mode);
+	// PORTB |= _BV(SDA);
+	// DDRB &= ~_BV(SDA);
 
 	// Listen for ACK/NACK
 	ERR = read_ACK_NACK();
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
-	while(bit_is_clear(PINB, SCL));
 	if (ERR) {
 		// Error handling
 	}
@@ -105,8 +106,6 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
 
 	// Listen for ACK/NACK
 	ERR = read_ACK_NACK();
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
-	while(bit_is_clear(PINB, SCL));
 	if (ERR) {
 		// Error handling
 	}
@@ -125,8 +124,6 @@ void transmit_I2C(uint8_t msg) {
 	// Listen for ACK/NACK
 
 	ERR = read_ACK_NACK();
-	I2C_PORT_DIRECTION_REGISTER |= _BV(SDA);
-	while(bit_is_clear(PINB, SCL));
 	if (ERR) {
 		// Error handling
 	}
@@ -143,9 +140,9 @@ void set_SDA(int bit) {
 
 	// If bit is 1, set SDA high, else set it low
 	if (bit) {
-		I2C_PORT |= _BV(SDA);
+		DDRB &= ~_BV(SDA);
 	} else {
-		I2C_PORT &= ~_BV(SDA);
+		DDRB |= _BV(SDA);
 	}
 
 	// Stall until SCL is high again, then exit
@@ -210,8 +207,10 @@ int read_ACK_NACK(void) {
 	while(bit_is_set(PINB, SCL)); // Secondary is reading previous value
 
 	// Give up control of SDA, disable internal pull-up resistors
-	I2C_PORT &= ~_BV(SDA);
-	I2C_PORT_DIRECTION_REGISTER &= ~_BV(SDA);
+	// DDRB &= ~_BV(SDA);
+	// PORTB |= _BV(SDA);
+
+	while(bit_is_clear(PINB, SCL));
 
 	// Read SDA
 	return bit_is_clear(PINB, SDA);
@@ -233,17 +232,18 @@ void stop_I2C(void) {
 
     // Wait for previous read_ACK_NACK() to be read
 	while(bit_is_set(PINB, SCL));
-	while(bit_is_clear(PINB, SCL));
 
 	// Pull down SDA
-	I2C_PORT &= ~_BV(SDA);
+	DDRB |= _BV(SDA);
 
     // Stop timer
 	TCCR1A &= ~_BV(COM1A0);
 
-    // Set SCL high
+	DDRB &= ~_BV(SDA);
+	//
+	// Set SCL high
 	I2C_PORT |= _BV(SCL);
-
+	//
 	// Set SDA back to high
-	I2C_PORT |= _BV(SDA);
+	// I2C_PORT |= _BV(SDA);
 }
