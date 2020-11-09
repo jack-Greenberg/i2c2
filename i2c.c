@@ -9,6 +9,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "i2c.h"
+#include "openDrain.h"
 
 #define BIT_MASK 0x1;
 
@@ -23,37 +24,54 @@ volatile uint8_t internalTimerFlag = 0x00;
  */
 void init_I2C(unsigned long bitrate)
 {
-    // Stop interrupts and reset Timer 1
-    cli();
-    TCCR1A = 0;
-    TCCR1B = 0;
-    TCNT1 = 0;
-    TIMSK0 = 0;
+	// Stop interrupts and reset Timer 1
+	cli();
+	TCCR1A = 0;
+	TCCR1B = 0;
+	TCNT1 = 0;
+	TIMSK0 = 0;
 
-    // PWM, phase correct, TOP is OCR1A
-    TCCR1A |= _BV(WGM10) | _BV(WGM11);
-    TCCR1B |= _BV(WGM13);
+	// PWM, phase correct, TOP is OCR1A
+	TCCR1A |= _BV(WGM10) | _BV(WGM11);
+	TCCR1B |= _BV(WGM13);
 
-    // Enable interrupts
-    TIMSK0 |= _BV(OCIE1A);
+	// Enable interrupts
+	TIMSK0 |= _BV(OCIE1A);
 
-    // Clock prescaler 1
-    TCCR1B |= _BV(CS10); // NEED TO COMMUNICATE PRESCALARS (SHOW DISCRETE POSSIBLITIES)
+	// Clock prescaler 1
+	TCCR1B |= _BV(CS10); // NEED TO COMMUNICATE PRESCALARS (SHOW DISCRETE POSSIBLITIES)
 
-    // Set Output Compare Register 1A (value the timer compares to to know when to reset)
-    OCR1A = F_CPU / (PRESCALER * (bitrate * 4));
+	// Set Output Compare Register 1A (value the timer compares to to know when to reset)
+	OCR1A = F_CPU / (PRESCALER * (bitrate * 4));
 
-    // Set the SDA and SCL pins to be outputs
-    // Set pins to be high at the beginning
-    I2C_PORT_DIRECTION_REGISTER = 0;
-    I2C_PORT = 0;
+	// Set the SDA and SCL pins to be outputs
+	// Set pins to be high at the beginning
+	// I2C_PORT_DIRECTION_REGISTER = 0;
+	// I2C_PORT = 0;
 
-    DDRB &= ~_BV(SDA); // & ~_BV(SCL);
-    DDRB |= _BV(SCL);
+	// Converted to new notation
+	// DDRB &= ~_BV(SDA); // & ~_BV(SCL);
+	// DDRB |= _BV(SCL);
+	setOpenDrainHigh(DDRB, PORTB, SDA);  // Verify that this should be high
+	setOpenDrainHigh(DDRB, PORTB, SCL);
 
-    // Reenable interrupts
-    sei();
+	// Reenable interrupts
+	sei();
 }
+
+void startTimer() {
+	// Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
+	TCCR1A |= _BV(COM1A0);
+}
+
+void stallUntilClockLow () {
+	while(bit_is_set(PINB, SCL));
+}
+
+void stallUntilClockHigh () {
+	while(bit_is_clear(PINB, SCL));
+}
+
 
 /**
  * Responsible for sending
@@ -66,45 +84,70 @@ void init_I2C(unsigned long bitrate)
  * @param secondary_register   register of secondary device
  * @param mode                 READ (1) or WRITE (0)
  */
-void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) {
-    int ERR, i;
+void start_I2C(uint8_t secondary_address, uint8_t secondary_register, i2c_mode_t mode) {
+	int ERR, i;
 
-    /*** START CONDITION ***/
+	/*** START CONDITION ***/
 
-    // Pull down SDA while SCL is high
-    DDRB |= _BV(SDA);
+	// Pull down SDA while SCL is high
+	// Converted to new notation DDRB |= _BV(SDA);
+	setOpenDrainLow(DDRB, PORTB, SDA);
 
-    // Start timer
-    TCCR1A |= _BV(COM1A0); // Clear OC1A on compare match when up-counting. Set OC1A on compare match when down-counting.
+	startTimer();
 
-    while(bit_is_set(PINB, SCL));
+	// Stall while clock is low
+	stallUntilClockLow(); //while(bit_is_set(PINB, SCL));
 
-    /*** END OF START CONDITION ***/
+	/*** END OF START CONDITION ***/
 
-    // Transmit address of secondary
-    for (i = ADDRESS_LENGTH - 1; i >= 0; i--) {
-        set_SDA(bit_is_set(secondary_address, i));
-    }
+	// Transmit address of secondary
+	for (i = ADDRESS_LENGTH - 1; i >= 0; i--) {
+		// Converted to new notation
+		// set_SDA(bit_is_set(secondary_address, i));
+		if (bit_is_set(secondary_address, i)) {
+			setOpenDrainHigh(DDRB, PORTB, SDA);
+		} else {
+			setOpenDrainLow(DDRB, PORTB, SDA);
+		}
+	}
 
-    // Transmit I2C mode (read/write)
-    set_SDA(mode);
+	// Transmit I2C mode (read/write)
+	// set_SDA(mode);
+	switch (mode) {
+	case READ:
+		setOpenDrainHigh(DDRB, PORTB, SDA);
+		break;
+	case WRITE:
+		setOpenDrainLow(DDRB, PORTB, SDA);
+		break;
+	}
 
-    while(bit_is_set(PINB, SCL)); // Wait while secondary is reading SDA
-    DDRB &= ~_BV(SDA);
-    while(bit_is_clear(PINB, SCL));
-    ERR = bit_is_set(PINB, SDA);
-    // while(bit_is_set(PINB, SCL));
+	stallUntilClockLow(); // while(bit_is_set(PINB, SCL)); // Wait while secondary is reading SDA
+	// Converted to new notation. DDRB &= ~_BV(SDA);
+	setOpenDrainHigh(DDRB, PORTB, SDA); // Give opportunity for secondary to send NACK
 
-    // Transmit register of secondary
-    for (i = REGISTER_LENGTH - 1; i >= 0; i--) {
-        set_SDA(bit_is_set(secondary_register, i));
-    }
+	stallUntilClockHigh();
+	ERR = bit_is_set(PINB, SDA); // Read ACK or NACK from secondary
 
-    while(bit_is_set(PINB, SCL)); // Wait while secondary is reading SDA
-    DDRB &= ~_BV(SDA);
-    while(bit_is_clear(PINB, SCL));
-    ERR = bit_is_set(PINB, SDA);
-    // while(bit_is_set(PINB, SCL));
+	// TODO: Deal with ERR
+
+	// Transmit register of secondary
+	for (i = REGISTER_LENGTH - 1; i >= 0; i--) {
+		//ka-blamow converted set_SDA(bit_is_set(secondary_register, i));
+		if (bit_is_set(secondary_register, i)) {
+			setOpenDrainHigh(DDRB, PORTB, SDA);
+		} else {
+			setOpenDrainLow(DDRB, PORTB, SDA);
+		}
+	}
+
+	// while(bit_is_set(PINB, SCL)); // Wait while secondary is reading SDA
+	stallUntilClockLow();
+	// DDRB &= ~_BV(SDA);
+	setOpenDrainHigh(DDRB, PORTB, SDA);
+
+	stallUntilClockHigh(); //while(bit_is_clear(PINB, SCL));
+	ERR = bit_is_set(PINB, SDA);
 }
 
 /**
@@ -113,38 +156,26 @@ void start_I2C(uint8_t secondary_address, uint8_t secondary_register, int mode) 
  * @param msg   8 bit message to be sent
  */
 void transmit_I2C(uint8_t msg) {
-    int ERR, i;
-    for (i = MSG_LENGTH - 1; i >= 0; i--) {
-        set_SDA(bit_is_set(msg, i));
-    }
+	int ERR, i;
+	for (i = MSG_LENGTH - 1; i >= 0; i--) {
+		//set_SDA(bit_is_set(msg, i));
+		if (bit_is_set(msg, i)) {
+			setOpenDrainHigh(DDRB, PORTB, SDA);
+		} else {
+			setOpenDrainLow(DDRB, PORTB, SDA);
+		}
+	}
 
-    while(bit_is_set(PINB, SCL)); // Wait while secondary is reading SDA
-    DDRB &= ~_BV(SDA);
-    while(bit_is_clear(PINB, SCL));
-    ERR = bit_is_set(PINB, SDA);
-    // while(bit_is_set(PINB, SCL));
+
+	stallUntilClockLow(); // Wait while secondary is reading SDA
+	// DDRB &= ~_BV(SDA);
+	setOpenDrainHigh(DDRB, PORTB, SDA);
+
+	stallUntilClockHigh();
+	ERR = bit_is_set(PINB, SDA);
 
 }
 
-/**
- * Sets SDA line high or low
- *
- * @param bit   the bit to set SDA at
- */
-void set_SDA(int bit) {
-    // Stall until SCL is low
-    while(bit_is_set(PINB, SCL));
-
-    // If bit is 1, set SDA high, else set it low
-    if (bit) {
-        DDRB &= ~_BV(SDA);
-    } else {
-        DDRB |= _BV(SDA);
-    }
-
-    // Stall until SCL is high again, then exit
-    while(bit_is_clear(PINB, SCL));
-}
 
 
 // void read_SDA(uint8_t secondary_address, uint8_t secondary_register, uint8_t *read_pointer, int bytes) {
@@ -201,17 +232,17 @@ void set_SDA(int bit) {
  * @return   1 if ACK, 0 if NACK
  */
 int read_ACK_NACK(void) {
-    while(bit_is_set(PINB, SCL)); // Secondary is reading previous value
+	while(bit_is_set(PINB, SCL)); // Secondary is reading previous value
 
-    // Give up control of SDA, disable internal pull-up resistors
-    DDRB |= _BV(SDA);
-    PORTB |= _BV(SDA);
+	// Give up control of SDA, disable internal pull-up resistors
+	DDRB |= _BV(SDA);
+	PORTB |= _BV(SDA);
 
-    // while(bit_is_clear(PINB, SCL));
+	// while(bit_is_clear(PINB, SCL));
 
-    // Read SDA
-    // return 0;
-    return bit_is_clear(PINB, SDA);
+	// Read SDA
+	// return 0;
+	return bit_is_clear(PINB, SDA);
 }
 
 // void send_ACK(void) {
@@ -226,20 +257,24 @@ int read_ACK_NACK(void) {
  * Issues stop condition to secondary and stops SCL
  */
 void stop_I2C(void) {
-    /*** STOP CONDITION ***/
+	/*** STOP CONDITION ***/
 
-    // Wait for previous read_ACK_NACK() to be read
-    while(bit_is_clear(PINB, SCL));
-    while(bit_is_set(PINB, SCL));
+	// Wait for previous read_ACK_NACK() to be read
+	stallUntilClockHigh();
+	stallUntilClockLow();
 
-    // Pull down SDA
-    DDRB |= _BV(SDA);
+	// Pull down SDA
+	// DDRB |= _BV(SDA);
+	setOpenDrainLow(DDRB, PORTB, SDA);
 
-    // Stop timer
-    TCCR1A &= ~_BV(COM1A0);
+	// Stop timer
+	TCCR1A &= ~_BV(COM1A0);
 
-    DDRB &= ~_BV(SDA);
+	// DDRB &= ~_BV(SDA);
+	setOpenDrainHigh(DDRB, PORTB, SDA);
 
-    // Set SCL high
-    I2C_PORT |= _BV(SCL);
+
+	// Set SCL high
+	// I2C_PORT |= _BV(SCL);
+	setOpenDrainHigh(DDRB, PORTB, SCL);
 }

@@ -17,8 +17,11 @@ main.hex: i2c.o libi2c.a main.o
 libi2c.a: i2c.o
 	avr-ar rcs libi2c.a i2c.o
 
-i2c.o: i2c.c i2c.h
-	${CC} ${CFLAGS} -c i2c.c -o i2c.o
+i2c.o: i2c.c i2c.h openDrain.o
+	${CC} ${CFLAGS} -c i2c.c openDrain.o -o i2c.o
+
+openDrain.o: openDrain.c openDrain.h
+	${CC} ${CFLAGS} -c openDrain.c -o openDrain.o
 
 .PHONY: clean
 clean:
